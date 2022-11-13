@@ -35,7 +35,7 @@ class Server:
 
             self.socket.bind((self.host, self.port))
             print("Socket binded to %s" % (port))
-            self.socket.listen(5)
+            self.socket.listen()
             print("Socket is listening")
         except socket.error as e:
             print("Bind failed."+str(e))
