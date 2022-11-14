@@ -2,29 +2,65 @@ import libvirt
 import socket
 import json
 import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation
 import time
+from _thread import start_new_thread
+import datetime
+
+plt.style.use('fivethirtyeight')
 
 
 class Graph:
-    def __init__(self, title: str, xlabel: str, ylabel: str, maxX: int):
-        self.title = title
-        self.xlabel = xlabel
-        self.ylabel = ylabel
-        self.maxX = maxX
-        self.legend = []
+    def __init__(self) -> None:
+        self.x1 = []
+        self.y1 = []
+        self.x2 = []
+        self.y2 = []
+        self.limit = 60
+        self.inc = 1
+        self.linewidth = 2
+        self.buffer = []
 
-        # self.x = []
-        # self.y = []
-        # self.colors = ['r', 'g', 'b', 'y', 'c', 'm', 'k']
-        # self.plt = plt.plot()
+    def add(self, cpu_usage):
+        self.buffer.append(cpu_usage)
 
-        # self.plt.show()
+    def run(self):
 
-    def add(self, y: list):
-        # self.y.append(y)
-        # if (len(y) > self.maxX):
-        #     y.pop(0)
-        pass
+        def plot(i):
+            if self.buffer:
+                self.plot(self.buffer.pop(0))
+
+        ani = FuncAnimation(plt.gcf(), plot, interval=500)
+        plt.tight_layout()
+        plt.show()
+
+    def plot(self, cpu_usage):
+        plt.cla()
+
+        plt.plot(self.x1, self.y1, linewidth=2, label='Machine 1')
+        plt.plot(self.x2, self.y2, linewidth=2, label='Machine 2')
+        plt.legend(loc='upper left')
+        plt.ylim(0, 100)
+        plt.xlim(0, 60, 5)
+        plt.gca().invert_xaxis()
+        plt.tight_layout()
+
+        for i in range(len(self.x1)):
+            self.x1[i] += self.inc
+        for i in range(len(self.x2)):
+            self.x2[i] += self.inc
+        if (len(cpu_usage) == 2):
+            self.y2.append(cpu_usage[1])
+            self.x2.append(0)
+        if (len(self.x1) == self.limit):
+            self.x1 = self.x1[1:]
+            self.y1 = self.y1[1:]
+        if (len(self.x2) == self.limit):
+            self.x2 = self.x2[1:]
+            self.y2 = self.y2[1:]
+
+        self.y1.append(cpu_usage[0])
+        self.x1.append(0)
 
 
 class ClientSocketClient:
@@ -45,18 +81,17 @@ class ClientSocketClient:
             print(str(e))
 
 
-def __getDomainIpAddress(dom: libvirt.virDomain) -> str:
+def getDomainIpAddress(dom: libvirt.virDomain) -> str:
     """Get the IP address of the domain"""
     return str(list(dom.interfaceAddresses(
         libvirt.VIR_DOMAIN_INTERFACE_ADDRESSES_SRC_LEASE, 0).values())[0]['addrs'][0]['addr'])
 
 
-def __getCPUUsage(doms: list[libvirt.virDomain], sleepTime) -> float:
+def getCPUUsage(doms: list[libvirt.virDomain], sleepTime) -> float:
     """Get the CPU usage of the domain"""
     cpu_time1 = []
     cpu_time2 = []
     for dom in doms:
-        # print(dom.getCPUStats(total=True))
         cpu_stats = dom.getCPUStats(total=True)
         cpu_time1.append(cpu_stats[0]['cpu_time'])
     time.sleep(sleepTime)
@@ -88,21 +123,24 @@ def AutoScaler(serverNamePrefix: str, serverCount: int, serverBaseImage: str, sc
 
     for server in activeServers:
         sendServerInfoToClient(
-            {"name": dom.name(), "ip": __getDomainIpAddress(dom)})
+            {"name": dom.name(), "ip": getDomainIpAddress(dom)})
 
-    graph = Graph("Server Load", "Time", "CPU Usage", 20)
+    graphPlotter = Graph()
 
     average_cpu_usage = [0.0 for i in range(scaleUpObservationPeriod)]
     waitBeforeNewCreate = 0
 
+    start_new_thread(graphPlotter.run, ())
+
     while True:
-        cpu_usage = __getCPUUsage(activeServers, 1)
-        graph.add(cpu_usage)
+        cpu_usage = getCPUUsage(activeServers, 0.5)
+        print(
+            f'Current Time: {datetime.datetime.now()} Cpu_usage : {cpu_usage}')
+        graphPlotter.add(cpu_usage)
         average_cpu_usage.append(sum(cpu_usage)/len(cpu_usage))
         average_cpu_usage.pop(0)
         runningAverage = sum(average_cpu_usage)/len(average_cpu_usage)
 
-        print("Average CPU Usage: ", average_cpu_usage)
         waitBeforeNewCreate = waitBeforeNewCreate - 1 if waitBeforeNewCreate > 0 else 0
 
         if runningAverage > scaleUpThreshold and waitBeforeNewCreate == 0:
@@ -115,7 +153,7 @@ def AutoScaler(serverNamePrefix: str, serverCount: int, serverBaseImage: str, sc
                 activeServers.append(newDom)
                 serverCount += 1
                 sendServerInfoToClient(
-                    {"name": newDom.name(), "ip": __getDomainIpAddress(newDom)})
+                    {"name": newDom.name(), "ip": getDomainIpAddress(newDom)})
                 waitBeforeNewCreate = 20
             except Exception as e:
                 print(str(e))
@@ -141,5 +179,7 @@ if __name__ == "__main__":
                    config["scaleUpObservationPeriod"], clientConn.sendServerInformation)
     except RuntimeError as err:
         print("Runtime Error"+str(err))
+        exit(1)
     except KeyboardInterrupt:
         print("Exiting...")
+        exit(0)

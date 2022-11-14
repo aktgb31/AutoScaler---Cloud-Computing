@@ -1,3 +1,4 @@
+import datetime
 import time
 import json
 import socket
@@ -7,6 +8,11 @@ from _thread import start_new_thread
 SERVER_COUNT = 0
 SERVER_DETAILS = []
 LOAD_GENERATOR_MODE = "LOW"
+
+
+def log(args) -> None:
+    with open("client.logs", "a") as f:
+        f.write(f'Time:{datetime.datetime.now()} {args}\n')
 
 
 class SocketServer:
@@ -19,11 +25,11 @@ class SocketServer:
         self.socket.settimeout(0.5)
         try:
             self.socket.bind((self.host, self.port))
-            print("Socket binded to %s" % (port))
+            log("Socket binded to %s" + str(self.port))
             self.socket.listen()
-            print("Socket is listening")
+            log("Socket is listening")
         except socket.error as e:
-            print("Bind failed."+str(e))
+            log("Bind failed."+str(e))
             sys.exit()
 
     def start(self) -> None:
@@ -40,7 +46,7 @@ class SocketServer:
             # Establish connection with client.
             try:
                 conn, addr = self.socket.accept()
-                print('Got connection from', addr)
+                log('Got connection from' + str(addr))
                 # Handle the request
                 self.__requestHandler(conn)
             except socket.timeout:
@@ -52,7 +58,7 @@ class SocketServer:
         """Handle the request from the client"""
         # receive data from the client
         data = c.recv(1024).decode()
-        print(data)
+        log(data)
         SERVER_COUNT += 1
         SERVER_DETAILS.append(json.loads(data))
         # close the connection
@@ -85,12 +91,12 @@ def loadGenerator(RUN: threading.Event) -> None:
             serverIp = SERVER_DETAILS[index]["ip"]
             s.connect((serverIp, port))
 
-            payload = "10000" if LOAD_GENERATOR_MODE == "LOW" else "1000000"
+            payload = "12000" if LOAD_GENERATOR_MODE == "LOW" else "1200000"
             s.sendall(payload.encode())
             data = s.recv(1024).decode()
 
         except Exception as e:
-            print(e)
+            log(e)
             return
         s.close()
         time.sleep(0.01)
@@ -114,10 +120,10 @@ if __name__ == "__main__":
             elif i == "HIGH":
                 LOAD_GENERATOR_MODE = "HIGH"
             else:
-                print("Invalid Command")
+                log("Invalid Command")
 
     except KeyboardInterrupt:
-        print("Stopping server")
+        log("Stopping server")
 
     RUN.clear()
     socketServer.stop()

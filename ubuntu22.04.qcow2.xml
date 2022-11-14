@@ -1,0 +1,28 @@
+<volume type='file'>
+  <name>ubuntu22.04.qcow2</name>
+  <key>/var/lib/libvirt/images/ubuntu22.04.qcow2</key>
+  <capacity unit='bytes'>5368709120</capacity>
+  <allocation unit='bytes'>3648212992</allocation>
+  <physical unit='bytes'>5369757696</physical>
+  <target>
+    <path>/var/lib/libvirt/images/ubuntu22.04.qcow2</path>
+    <format type='qcow2'/>
+    <permissions>
+      <mode>0600</mode>
+      <owner>1000</owner>
+      <group>1000</group>
+    </permissions>
+    <timestamps>
+      <atime>1668311983.524751931</atime>
+      <mtime>1668201403.166096862</mtime>
+      <ctime>1668201403.614097048</ctime>
+      <btime>0</btime>
+    </timestamps>
+    <compat>1.1</compat>
+    <clusterSize unit='B'>65536</clusterSize>
+    <features>
+      <lazy_refcounts/>
+    </features>
+  </target>
+</volume>
+
