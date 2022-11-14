@@ -42,6 +42,8 @@ class Graph:
         plt.legend(loc='upper left')
         plt.ylim(0, 100)
         plt.xlim(0, 60, 5)
+        plt.xlabel("Time")
+        plt.ylabel("CPU Usage")
         plt.gca().invert_xaxis()
         plt.tight_layout()
 

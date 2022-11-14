@@ -113,17 +113,21 @@ if __name__ == "__main__":
     RUN.set()
     start_new_thread(loadGenerator, (RUN,))
     try:
+        print("Starting sending rqeuests in LOW mode")
         while True:
-            i = input("Enter command = LOW/HIGH: ")
+            i = input("Enter traffic load to generate (LOW/HIGH): ")
+            log("Traffic Load Command "+i)
             if i == "LOW":
                 LOAD_GENERATOR_MODE = "LOW"
             elif i == "HIGH":
                 LOAD_GENERATOR_MODE = "HIGH"
             else:
-                log("Invalid Command")
+                print("Invalid input")
+                log("Invalid input")
 
     except KeyboardInterrupt:
         log("Stopping server")
+        print("Stopping server")
 
     RUN.clear()
     socketServer.stop()
